@@ -37,8 +37,12 @@ def process(ics_string, end_date, start_date=None, include_full_day=False):
         if item.name != 'VEVENT':
             continue
 
-        item_start = item['DTSTART'].dt
-        item_end = item['DTEND'].dt
+        try:
+            item_start = item['DTSTART'].dt
+            item_end = item['DTEND'].dt
+        except KeyError, e:
+            sys.stderr.write("KeyError on item: %s\n\t%s\n\n" % (item, e))
+            continue
 
         if (isinstance(item_start, date) and not isinstance(item_start, datetime)
             and not include_full_day):
