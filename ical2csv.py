@@ -40,7 +40,7 @@ def process(ics_string, end_date, start_date=None, include_full_day=False):
         try:
             item_start = item['DTSTART'].dt
             item_end = item['DTEND'].dt
-        except KeyError, e:
+        except KeyError as e:
             sys.stderr.write("KeyError on item: %s\n\t%s\n\n" % (item, e))
             continue
 
@@ -54,9 +54,9 @@ def process(ics_string, end_date, start_date=None, include_full_day=False):
         item['SUMMARY'] = item['SUMMARY'].replace(',', ';')
         item['LOCATION'] = item['LOCATION'].replace(',', ';')
 
-        yield ','.join(unicode(item[key].dt)
+        yield ','.join(str(item[key].dt)
                        if hasattr(item[key], 'dt')
-                       else unicode(item[key])
+                       else item[key]
                        for key in keys)
 
         # Handle recurrence rules
@@ -85,10 +85,12 @@ def process(ics_string, end_date, start_date=None, include_full_day=False):
                     for rooted_delta in rooted_deltas:
                         unrooted_item['DTSTART'] += rooted_delta
                         unrooted_item['DTEND'] += rooted_delta
-                        yield ','.join(unicode(unrooted_item[key])
+                        yield ','.join(str(unrooted_item[key])
                                        for key in keys)
             elif 'COUNT' in rrule:
-                for _ in range(rrule['COUNT']):
+                count = rrule['COUNT']
+                count = count[0] if isinstance(count, list) else count
+                for _ in range(count):
                     recur_item['DTSTART'] += delta
                     recur_item['DTEND'] += delta
 
@@ -96,7 +98,7 @@ def process(ics_string, end_date, start_date=None, include_full_day=False):
                     for rooted_delta in rooted_deltas:
                         unrooted_item['DTSTART'] += rooted_delta
                         unrooted_item['DTEND'] += rooted_delta
-                        yield ','.join(unicode(unrooted_item[key])
+                        yield ','.join(str(unrooted_item[key])
                                        for key in keys)
 
 
@@ -122,4 +124,4 @@ if __name__ == '__main__':
 
     for csv_line in process(data, end_date, start_date,
                          args.include_full_day):
-        print csv_line.encode('utf-8')
+        print(csv_line)
