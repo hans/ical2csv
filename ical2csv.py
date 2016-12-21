@@ -1,6 +1,7 @@
 import argparse
 import copy
 from datetime import date, datetime, timedelta
+import itertools
 import sys
 
 from dateutil.relativedelta import relativedelta
@@ -68,6 +69,18 @@ def process(ics_string, end_date, start_date=None, include_full_day=False):
                           else item[key]
                           for key in keys}
 
+            # Exceptions
+            exception_dates = set()
+            if 'EXDATE' in item:
+                exdate_data = item['EXDATE']
+                if not isinstance(exdate_data, list):
+                    # Sometimes this comes nested and sometimes not :(
+                    exdate_data = [item['EXDATE']]
+
+                exception_dates = [[dt_obj.dt for dt_obj in exdate_nested.dts]
+                                   for exdate_nested in exdate_data]
+                exception_dates = set(itertools.chain(*exception_dates))
+
             rooted_deltas = [timedelta(days=0)]
             if 'BYDAY' in rrule:
                 first_day = WEEKDAYS[rrule['BYDAY'][0]]
@@ -85,8 +98,13 @@ def process(ics_string, end_date, start_date=None, include_full_day=False):
                     for rooted_delta in rooted_deltas:
                         unrooted_item['DTSTART'] += rooted_delta
                         unrooted_item['DTEND'] += rooted_delta
+
+                        if unrooted_item['DTSTART'] in exception_dates:
+                            continue
+
                         yield ','.join(str(unrooted_item[key])
                                        for key in keys)
+
             elif 'COUNT' in rrule:
                 count = rrule['COUNT']
                 count = count[0] if isinstance(count, list) else count
@@ -98,6 +116,10 @@ def process(ics_string, end_date, start_date=None, include_full_day=False):
                     for rooted_delta in rooted_deltas:
                         unrooted_item['DTSTART'] += rooted_delta
                         unrooted_item['DTEND'] += rooted_delta
+
+                        if unrooted_item['DTSTART'] in exception_dates:
+                            continue
+
                         yield ','.join(str(unrooted_item[key])
                                        for key in keys)
 
